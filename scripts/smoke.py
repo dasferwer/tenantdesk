@@ -1,4 +1,4 @@
-"""Live HTTP scenario covering organization isolation, invitations, restore and export."""
+"""Через API проверяем права двух компаний, приглашения, восстановление и экспорт."""
 
 import json
 import os

@@ -243,7 +243,7 @@ async def invite(data: InvitationInput, ctx: Context):
 async def accept(data: InvitationAccept, user: User = Depends(current_user)):
     async with engine.begin() as conn:
         await set_context(conn, data.tenant_id, user.id)
-        # Same lock order as every tenant mutation: tenant, then its child records.
+        # Как и в остальных операциях, сначала блокируем компанию, затем её записи.
         tenant = (
             (
                 await conn.execute(

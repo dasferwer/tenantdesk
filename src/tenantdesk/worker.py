@@ -19,7 +19,7 @@ logger = logging.getLogger("exporter")
 async def process_job(candidate):
     async with worker_engine.begin() as conn:
         await set_context(conn, candidate["tenant_id"])
-        # Same order as API mutations prevents a job-delete vs. worker deadlock.
+        # Соблюдаем порядок блокировок API, чтобы не получить deadlock при удалении задания.
         tenant = await conn.scalar(
             text("SELECT id FROM tenants WHERE id=:id FOR UPDATE SKIP LOCKED"),
             {"id": candidate["tenant_id"]},
@@ -52,7 +52,7 @@ async def process_job(candidate):
         if not allowed:
             error = "membership_revoked"
         else:
-            # No WHERE tenant_id: the worker's database role is subject to the same RLS.
+            # У роли воркера тоже включён RLS: база сама ограничит выборку текущей компанией.
             docs = [
                 dict(r)
                 for r in (

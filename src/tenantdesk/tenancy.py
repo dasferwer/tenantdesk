@@ -10,7 +10,7 @@ from .db import engine
 
 
 async def set_context(conn, tenant_id=None, actor_id=None):
-    # Transaction-local settings are reset on commit/rollback, including pooled connections.
+    # SET LOCAL сбросится при commit или rollback, прежде чем соединение вернётся в пул.
     await conn.execute(
         text(
             "SELECT set_config('app.tenant_id',:tenant,true),set_config('app.actor_id',:actor,true)"

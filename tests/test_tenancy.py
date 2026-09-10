@@ -242,7 +242,8 @@ async def test_storage_quota_counts_utf8_bytes_and_retained_revisions(
 ):
     await quota(organizations, max_storage_bytes=12)
     h = headers(identities, organizations)
-    doc = await document(client, h, "A", "тест")  # 1 + 8 UTF-8 bytes
+    # Считаем байты UTF-8: 1 байт старой версии и 8 байт новой.
+    doc = await document(client, h, "A", "тест")
     response = await client.put(
         f"/documents/{doc['id']}", json={"title": "B", "body": "x"}, headers={**h, "If-Match": "1"}
     )

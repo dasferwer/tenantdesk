@@ -91,7 +91,7 @@ async def create_document(context, title, body):
 
 
 async def get_document(context, document_id):
-    # Deliberately no tenant filter: PostgreSQL RLS supplies the isolation predicate.
+    # Фильтр компании здесь добавляет PostgreSQL через RLS.
     row = (
         (
             await context.conn.execute(
