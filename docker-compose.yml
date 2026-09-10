@@ -1,0 +1,113 @@
+name: 12-tenantdesk
+
+x-app: &app
+  build:
+    context: .
+    target: runtime
+  environment: &environment
+    DATABASE_URL: postgresql+asyncpg://tenantdesk_app:tenantdesk_app@database:5432/tenantdesk
+    JWT_SECRET: ${JWT_SECRET:-local-demo-tenantdesk-replace-before-deployment}
+    WORKER_INTERVAL: ${WORKER_INTERVAL:-0.5}
+  restart: unless-stopped
+  init: true
+
+services:
+  database:
+    image: tenantdesk-postgres:local
+    build:
+      context: .
+      dockerfile: Dockerfile.database
+    environment:
+      POSTGRES_DB: tenantdesk
+      POSTGRES_USER: tenantdesk_owner
+      POSTGRES_PASSWORD: tenantdesk_owner
+      APP_DB_PASSWORD: tenantdesk_app
+      WORKER_DB_PASSWORD: tenantdesk_worker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tenantdesk_owner -d tenantdesk"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    <<: *app
+    environment:
+      <<: *environment
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://tenantdesk_owner:tenantdesk_owner@database:5432/tenantdesk
+    command: ["sh", "-c", "alembic upgrade head && python scripts/seed.py"]
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *app
+    ports:
+      - "127.0.0.1:8120:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  worker:
+    <<: *app
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_health.py", "exporter"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    environment:
+      <<: *environment
+      DATABASE_URL: postgresql+asyncpg://tenantdesk_worker:tenantdesk_worker@database:5432/tenantdesk
+      WORKER_DATABASE_URL: postgresql+asyncpg://tenantdesk_worker:tenantdesk_worker@database:5432/tenantdesk
+    command: ["python", "-m", "tenantdesk.worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  test-db:
+    image: tenantdesk-postgres:local
+    build:
+      context: .
+      dockerfile: Dockerfile.database
+    profiles: ["test"]
+    environment:
+      POSTGRES_DB: tenantdesk_test
+      POSTGRES_USER: tenantdesk_owner
+      POSTGRES_PASSWORD: tenantdesk_owner
+      APP_DB_PASSWORD: tenantdesk_app
+      WORKER_DB_PASSWORD: tenantdesk_worker
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tenantdesk_owner -d tenantdesk_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  test:
+    build:
+      context: .
+      target: test
+    profiles: ["test"]
+    environment:
+      <<: *environment
+      DATABASE_URL: postgresql+asyncpg://tenantdesk_app:tenantdesk_app@test-db:5432/tenantdesk_test
+      WORKER_DATABASE_URL: postgresql+asyncpg://tenantdesk_worker:tenantdesk_worker@test-db:5432/tenantdesk_test
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://tenantdesk_owner:tenantdesk_owner@test-db:5432/tenantdesk_test
+      TESTING: "true"
+    depends_on:
+      test-db:
+        condition: service_healthy
+    init: true
+
+volumes:
+  postgres_data:
