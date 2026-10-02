@@ -1,0 +1,29 @@
+{
+  "checked_at_utc": "2026-10-02T21:01:03.939112+00:00",
+  "application_base_sha": "d676c2b6631f76af8da8462f0d18c033fda88316",
+  "scope": "Локальные проверки изменений этапа D; CI опубликованного коммита проверяется отдельно.",
+  "environment": {
+    "host": "macOS arm64",
+    "database": "PostgreSQL 17",
+    "compose": "5.4.0"
+  },
+  "pytest_passed": 20,
+  "ruff": "passed",
+  "format": "passed",
+  "scenario": {
+    "scenario": "worker_restart_after_membership_revocation",
+    "queued_while_worker_stopped": 2,
+    "same_key_same_job": true,
+    "valid_export": "done",
+    "revoked_export": "rejected",
+    "revocation_reason": "membership_revoked",
+    "revoked_download_status": 403,
+    "cross_tenant_download_status": 404,
+    "only_own_document": true
+  },
+  "safety_tests_passed": 1,
+  "safety_checks": {
+    "foreign_api_refused_before_mutation": true,
+    "worker_not_restarted_on_foreign_api": true
+  }
+}

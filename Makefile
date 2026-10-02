@@ -1,4 +1,4 @@
-.PHONY: up down logs check test smoke
+.PHONY: up down logs check test smoke recovery
 up:
 	docker compose up --build -d --wait
 down:
@@ -14,3 +14,5 @@ test:
 	docker compose --profile test run --rm test
 smoke:
 	docker compose exec -T api python scripts/smoke.py
+recovery:
+	uv run python scripts/recovery_smoke.py

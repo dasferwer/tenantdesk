@@ -3,6 +3,8 @@ on: [push, pull_request]
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROJECT_NAME: proof-tenantdesk-ci
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -12,6 +14,12 @@ jobs:
       - run: docker compose --profile test run --rm test
       - run: docker compose up --build -d --wait --wait-timeout 180
       - run: docker compose exec -T api python scripts/smoke.py
+      - name: Отказ при чужом HTTP-адресе до остановки worker
+        run: uv run pytest -q scripts/test_recovery_safety.py
+        env:
+          BASE_URL: http://127.0.0.1:8120
+      - name: Восстановление экспорта после остановки worker и отзыва членства
+        run: BASE_URL=http://127.0.0.1:8120 uv run python scripts/recovery_smoke.py
       - if: always()
         run: docker compose --profile test logs --tail=100
       - if: always()
